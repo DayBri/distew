@@ -47,7 +47,13 @@
     "parserOptions": {
       "ecmaVersion": 2020
     },
-    "rules": {}
+    "rules": {
+      "vue/multi-word-component-names": 0,
+      "no-unused-vars": "off",
+      "vue/no-unused-components": 0,
+      "no-mixed-spaces-and-tabs": "off",
+      "no-redeclare": "off"
+    }
   },
   "browserslist": [
     "> 1%",
