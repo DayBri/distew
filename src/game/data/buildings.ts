@@ -18,10 +18,10 @@ export interface BuildingLevel {
   // Other buildings needed (at least at this level) before this level can be built, e.g. { town_hall: 1 }.
   requires?: Record<string, number>
   unlocks?: UnlockId[]
-  // Produced over time (including while away) into the building's storage until collected.
+  // Resources the player can gather by hand, one per click, from the sidebar.
+  gather?: ResourceId[]
+  // Resources produced automatically (including while away), straight into the player's materials.
   produces?: Production[]
-  // Max of each produced resource the building holds before it stops producing.
-  storage?: number
 }
 
 export interface BuildingType {
@@ -32,6 +32,8 @@ export interface BuildingType {
   color: string
   // Tiles taken up on the town grid (before rotation).
   footprint: { w: number, h: number }
+  // Materials that belong to this building. They're listed under it in the sidebar.
+  resources?: ResourceId[]
   // Shown at level 0 for buildings the town starts with in ruins. Ruins can't be built from the build menu.
   ruinedName?: string
   // levels[0] is level 1 (wooden), levels[1] is level 2 (stone), ...
@@ -62,29 +64,51 @@ export const BUILDINGS: Record<string, BuildingType> = {
     icon: 'mdi-barley',
     color: '#d9b44a',
     footprint: { w: 2, h: 3 },
+    resources: ['wheat', 'carrot', 'potato', 'onion'],
     levels: [
       {
         name: 'Wooden Farm',
-        description: 'A small wheat field. Wheat grows while you are away.',
+        description: 'A small wheat field. Harvest wheat by hand.',
         cost: { stick: 40, pebble: 20 },
         buildSeconds: 45,
         requires: { town_hall: 1 },
-        produces: [{ resource: 'wheat', perMinute: 6 }],
-        storage: 30
+        gather: ['wheat']
       },
       {
         name: 'Wooden Farm II',
-        description: 'Extra plots for carrots, potatoes and onions.',
+        description: 'Wheat now grows and harvests itself. Adds carrots, potatoes and onions to harvest by hand.',
         cost: { stick: 60, pebble: 40, wheat: 30 },
         buildSeconds: 90,
         requires: { town_hall: 1 },
-        produces: [
-          { resource: 'wheat', perMinute: 8 },
-          { resource: 'carrot', perMinute: 3 },
-          { resource: 'potato', perMinute: 3 },
-          { resource: 'onion', perMinute: 3 }
-        ],
-        storage: 60
+        gather: ['wheat', 'carrot', 'potato', 'onion'],
+        produces: [{ resource: 'wheat', perMinute: 6 }]
+      }
+    ]
+  },
+  mine: {
+    id: 'mine',
+    name: 'Mine',
+    icon: 'mdi-pickaxe',
+    color: '#8d8d99',
+    footprint: { w: 2, h: 2 },
+    resources: ['stone', 'copper'],
+    levels: [
+      {
+        name: 'Wooden Mine',
+        description: 'A shallow dig into the hillside. Mine stone by hand.',
+        cost: { stick: 50, pebble: 40, wheat: 20 },
+        buildSeconds: 60,
+        requires: { farm: 1 },
+        gather: ['stone']
+      },
+      {
+        name: 'Wooden Mine II',
+        description: 'Stone is now mined automatically. Copper can be mined by hand.',
+        cost: { stick: 80, stone: 40, wheat: 40 },
+        buildSeconds: 120,
+        requires: { farm: 1 },
+        gather: ['stone', 'copper'],
+        produces: [{ resource: 'stone', perMinute: 4 }]
       }
     ]
   }

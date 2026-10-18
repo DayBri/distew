@@ -15,7 +15,7 @@
             :placing-type-id="placingTypeId"
             @select-building="selectBuilding"
             @place="place"
-            @cancel-placement="placingTypeId = null"
+            @cancel-placement="cancelPlacing"
           />
 
           <div class="map-overlay">
@@ -69,14 +69,28 @@ export default Vue.extend({
     windowSize: { x: 0, y: 0 },
     selectedBuildingId: null as string | null,
     showBuildMenu: false,
-    placingTypeId: null as string | null,
     error: { show: false, text: '' }
   }),
   computed: {
+    // Shared with the sidebar, which can also start placing a building.
+    placingTypeId (): string | null {
+      return store.placingTypeId
+    },
     selectedBuilding (): PlacedBuilding | null {
       const game = store.game
       return (game && game.buildings.find(b => b.id === this.selectedBuildingId)) || null
     }
+  },
+  watch: {
+    // However placement starts (build menu or sidebar), close the floating panels so the map is clear.
+    placingTypeId (typeId: string | null) {
+      if (!typeId) return
+      this.showBuildMenu = false
+      this.selectedBuildingId = null
+    }
+  },
+  beforeDestroy () {
+    store.startPlacing(null)
   },
   created () {
     // New towns start with the ruined town hall open so it's obvious what to do first.
@@ -97,9 +111,10 @@ export default Vue.extend({
       if (this.showBuildMenu) this.selectedBuildingId = null
     },
     startPlacing (typeId: string) {
-      this.showBuildMenu = false
-      this.selectedBuildingId = null
-      this.placingTypeId = typeId
+      store.startPlacing(typeId)
+    },
+    cancelPlacing () {
+      store.startPlacing(null)
     },
     place ({ x, y, rotation }: { x: number, y: number, rotation: Rotation }) {
       if (!this.placingTypeId) return
@@ -108,7 +123,7 @@ export default Vue.extend({
         this.error = { show: true, text: result.error }
         return
       }
-      this.placingTypeId = null
+      store.startPlacing(null)
       this.selectedBuildingId = result.buildingId
     }
   }

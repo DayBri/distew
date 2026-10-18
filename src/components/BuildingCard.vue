@@ -8,15 +8,20 @@
       <v-btn v-if="closable" icon small class="ml-1" @click.stop="$emit('close')"><v-icon small>mdi-close</v-icon></v-btn>
     </v-card-title>
 
-    <v-card-text v-if="rates.length" class="pb-0">
-      <div class="text-overline">Produces · stores up to {{ cap }}</div>
-      <div v-for="rate in rates" :key="rate.resource" class="d-flex align-center">
-        <v-icon x-small class="mr-2">{{ resources[rate.resource].icon }}</v-icon>
-        <span>{{ resources[rate.resource].name }}</span>
-        <v-spacer />
-        <span class="text-caption">{{ formatRate(rate.perMinute) }}/min</span>
+    <v-card-text v-if="gatherNames || rates.length" class="pb-0">
+      <div v-if="gatherNames" class="mb-1">
+        <div class="text-overline">Gather by hand</div>
+        <div class="text-body-2">{{ gatherNames }} – click them in the sidebar.</div>
       </div>
-      <div v-if="isFull" class="text-caption warning--text mt-1">Storage full – collect from the sidebar to keep producing.</div>
+      <div v-if="rates.length">
+        <div class="text-overline">Automatic</div>
+        <div v-for="rate in rates" :key="rate.resource" class="d-flex align-center">
+          <v-icon x-small class="mr-2">{{ resources[rate.resource].icon }}</v-icon>
+          <span>{{ resources[rate.resource].name }}</span>
+          <v-spacer />
+          <span class="text-caption">+{{ formatRate(rate.perMinute) }}/min</span>
+        </div>
+      </div>
     </v-card-text>
 
     <v-card-text v-if="isConstructing">
@@ -57,7 +62,7 @@
 import Vue, { PropType } from 'vue'
 import { BUILDINGS, BuildingLevel, BuildingType, levelInfo, Production } from '@/game/data/buildings'
 import { RESOURCES, ResourceId } from '@/game/data/resources'
-import { buildDurationMs, buildingName, constructionBlocker, costEntries, productionRates, storageCap } from '@/game/engine'
+import { buildDurationMs, buildingName, constructionBlocker, costEntries, gatherable, productionRates } from '@/game/engine'
 import { GameState, PlacedBuilding } from '@/game/state'
 import { store } from '@/game/store'
 import { formatDuration } from '@/game/format'
@@ -91,11 +96,8 @@ export default Vue.extend({
     rates (): Production[] {
       return productionRates(this.game, this.building)
     },
-    cap (): number {
-      return storageCap(this.building)
-    },
-    isFull (): boolean {
-      return this.rates.length > 0 && this.rates.every(rate => this.stored(rate.resource) >= this.cap)
+    gatherNames (): string {
+      return gatherable(this.building).map(id => RESOURCES[id].name).join(', ')
     },
     actionLabel (): string {
       if (this.building.level > 0) return 'Upgrade'
@@ -125,9 +127,6 @@ export default Vue.extend({
   methods: {
     have (id: ResourceId): number {
       return this.game.resources[id]
-    },
-    stored (id: ResourceId): number {
-      return this.building.stored[id] || 0
     },
     build () {
       store.startConstruction(this.building.id)

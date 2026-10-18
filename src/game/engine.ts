@@ -105,7 +105,7 @@ export function placeBuilding (
   if (blocker) return { error: blocker }
   if (!new OccupancyGrid(game).canPlace(typeId, x, y, rotation)) return { error: "Can't build there" }
 
-  const building: PlacedBuilding = { id: uid(), typeId, level: 0, x, y, rotation, stored: {} }
+  const building: PlacedBuilding = { id: uid(), typeId, level: 0, x, y, rotation }
   game.buildings.push(building)
   const error = startConstruction(game, building.id, now)
   if (error) {
@@ -124,27 +124,18 @@ export function productionRates (game: GameState, building: PlacedBuilding): Pro
   return info.produces.map(p => ({ resource: p.resource, perMinute: p.perMinute * multiplier }))
 }
 
-export function storageCap (building: PlacedBuilding): number {
+// Resources this building lets the player gather by hand at its current level.
+export function gatherable (building: PlacedBuilding): ResourceId[] {
   const info = levelInfo(building.typeId, building.level)
-  return (info && info.storage) || 0
+  return (info && info.gather) || []
 }
 
-// Moves the whole units stored in a building into the player's resources.
-export function collect (game: GameState, buildingId: string): Partial<Record<ResourceId, number>> {
+// One click = one resource, if the building has unlocked gathering it.
+export function gather (game: GameState, buildingId: string, resource: ResourceId): boolean {
   const building = game.buildings.find(b => b.id === buildingId)
-  const collected: Partial<Record<ResourceId, number>> = {}
-  if (!building) return collected
-
-  const stored = { ...building.stored }
-  ;(Object.keys(stored) as ResourceId[]).forEach(id => {
-    const whole = Math.floor(stored[id] || 0)
-    if (whole <= 0) return
-    game.resources[id] += whole
-    stored[id] = (stored[id] || 0) - whole
-    collected[id] = whole
-  })
-  building.stored = stored
-  return collected
+  if (!building || !gatherable(building).includes(resource)) return false
+  game.resources[resource] += 1
+  return true
 }
 
 // Advances the game to `now`. Uses timestamps rather than counting ticks, so time spent
@@ -156,17 +147,17 @@ export function tick (game: GameState, now: number): PlacedBuilding[] {
 
   // Produce first, so a building that finishes upgrading this tick doesn't
   // get its new rates applied to the whole time away.
+  // Whole units go straight into the player's materials; leftover fractions wait in `carry`.
+  const carry = { ...game.carry }
   game.buildings.forEach(building => {
-    const rates = productionRates(game, building)
-    if (!rates.length) return
-    const cap = storageCap(building)
-    const stored = { ...building.stored }
-    rates.forEach(({ resource, perMinute }) => {
-      stored[resource] = Math.min(cap, (stored[resource] || 0) + perMinute * minutes)
+    productionRates(game, building).forEach(({ resource, perMinute }) => {
+      const total = (carry[resource] || 0) + perMinute * minutes
+      const whole = Math.floor(total)
+      game.resources[resource] += whole
+      carry[resource] = total - whole
     })
-    // Replaced rather than mutated so Vue picks up newly added resource keys.
-    building.stored = stored
   })
+  game.carry = carry
 
   const finished: PlacedBuilding[] = []
   const construction = game.construction

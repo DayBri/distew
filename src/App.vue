@@ -5,6 +5,9 @@
       <v-toolbar-title class="text-subtitle-1 font-weight-bold">IDLE GAME</v-toolbar-title>
       <v-spacer />
       <template v-if="game">
+        <span class="mr-4" title="Gold">
+          <v-icon small color="amber">{{ goldIcon }}</v-icon> {{ gold }}
+        </span>
         <span class="mr-2">Day {{ game.day }}</span>
         <v-menu offset-y left>
           <template #activator="{ on, attrs }">
@@ -90,7 +93,7 @@ import Vue from 'vue'
 import AvatarPlaceholder from '@/components/AvatarPlaceholder.vue'
 import ProductionList from '@/components/ProductionList.vue'
 import { levelInfo } from '@/game/data/buildings'
-import { RESOURCE_IDS, RESOURCES } from '@/game/data/resources'
+import { RESOURCES, STARTER_RESOURCES } from '@/game/data/resources'
 import { buildingName } from '@/game/engine'
 import { store } from '@/game/store'
 
@@ -101,6 +104,7 @@ export default Vue.extend({
   components: { AvatarPlaceholder, ProductionList },
   data: () => ({
     tickTimer: 0,
+    goldIcon: RESOURCES.gold.icon,
     snackbar: { show: false, text: '' }
   }),
   computed: {
@@ -116,9 +120,12 @@ export default Vue.extend({
     materials (): { id: string, name: string, icon: string, amount: number }[] {
       const game = store.game
       if (!game) return []
-      return RESOURCE_IDS
+      return STARTER_RESOURCES
         .filter(id => game.resources[id] > 0)
         .map(id => ({ id, ...RESOURCES[id], amount: game.resources[id] }))
+    },
+    gold (): number {
+      return store.game ? store.game.resources.gold : 0
     }
   },
   mounted () {

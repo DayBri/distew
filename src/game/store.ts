@@ -11,7 +11,8 @@ import { createNewGame, GameState, NewGameInput, PlacedBuilding, Rotation } from
 const state = Vue.observable({
   game: loadGame() as GameState | null,
   // Updated every tick so countdowns and progress bars re-render.
-  now: Date.now()
+  now: Date.now(),
+  placingTypeId: null as string | null
 })
 
 export interface TickResult {
@@ -86,11 +87,20 @@ export const store = {
     return result
   },
 
-  collect (buildingId: string): Partial<Record<ResourceId, number>> {
-    if (!state.game) return {}
-    const collected = engine.collect(state.game, buildingId)
-    persist()
-    return collected
+  gather (buildingId: string, resource: ResourceId): boolean {
+    if (!state.game) return false
+    const gathered = engine.gather(state.game, buildingId, resource)
+    if (gathered) persist()
+    return gathered
+  },
+
+  // UI state shared between the sidebar and the map: the building type being placed, if any.
+  get placingTypeId (): string | null {
+    return state.placingTypeId
+  },
+
+  startPlacing (typeId: string | null) {
+    state.placingTypeId = typeId
   },
 
   startAdventure (lengthId: string): string | null {

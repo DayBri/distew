@@ -1,5 +1,5 @@
-import { emptyResources } from './data/resources'
-import { GameState, MAP_SIZE, SAVE_VERSION, startingTownHall } from './state'
+import { emptyResources, ResourceId } from './data/resources'
+import { GameState, MAP_SIZE, PlacedBuilding, SAVE_VERSION, startingTownHall } from './state'
 
 const SAVE_KEY = 'distew.save'
 
@@ -40,9 +40,8 @@ function migrate (save: GameState): GameState | null {
     save.construction = null
   }
 
-  // v2 -> v3: buildings can produce and store resources.
+  // v2 -> v3: buildings can produce resources.
   if (save.version < 3) {
-    save.buildings.forEach(building => { building.stored = building.stored || {} })
     save.lastTick = save.lastSeen
   }
 
@@ -57,6 +56,16 @@ function migrate (save: GameState): GameState | null {
 
   // Resources added to the game after this save was made start at 0.
   save.resources = { ...emptyResources(), ...save.resources }
+
+  // v4 -> v5: buildings no longer store resources to collect; anything waiting goes straight to the player.
+  save.buildings.forEach(building => {
+    const legacy = building as PlacedBuilding & { stored?: Partial<Record<ResourceId, number>> }
+    Object.entries(legacy.stored || {}).forEach(([id, amount]) => {
+      save.resources[id as ResourceId] += Math.floor(amount || 0)
+    })
+    delete legacy.stored
+  })
+
   fillMissingFields(save)
   save.version = SAVE_VERSION
   return save
@@ -73,5 +82,5 @@ function fillMissingFields (save: GameState) {
   if (!Array.isArray(save.blueprints)) save.blueprints = []
   if (!save.stats) save.stats = { adventuresCompleted: 0 }
   if (!save.player.equipment) save.player.equipment = { weapon: null, armor: null }
-  save.buildings.forEach(building => { building.stored = building.stored || {} })
+  if (!save.carry) save.carry = {}
 }

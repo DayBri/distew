@@ -7,7 +7,7 @@ import { emptyResources, ResourceId } from './data/resources'
 import { applyTraitBonuses, baseTraits, Traits } from './data/traits'
 import { uid } from './rng'
 
-export const SAVE_VERSION = 4
+export const SAVE_VERSION = 5
 export const MAP_SIZE = 30
 
 export type ThemeId = 'regular' | 'jungle' | 'desert'
@@ -73,8 +73,6 @@ export interface PlacedBuilding {
   x: number
   y: number
   rotation: Rotation
-  // Produced resources waiting to be collected (fractional while they grow).
-  stored: Partial<Record<ResourceId, number>>
 }
 
 export interface GameState {
@@ -87,6 +85,8 @@ export interface GameState {
   theme: ThemeId
   player: Player
   resources: Record<ResourceId, number>
+  // Fractions of a resource produced automatically but not yet a whole unit.
+  carry: Partial<Record<ResourceId, number>>
   townsfolk: Person[]
   map: { width: number, height: number }
   buildings: PlacedBuilding[]
@@ -145,6 +145,7 @@ export function createNewGame (input: NewGameInput): GameState {
       equipment: { weapon: null, armor: null }
     },
     resources,
+    carry: {},
     townsfolk: [],
     map,
     buildings: [startingTownHall(map)],
@@ -166,7 +167,6 @@ export function startingTownHall (map: { width: number, height: number }): Place
     level: 0,
     x: Math.floor((map.width - w) / 2),
     y: Math.floor((map.height - h) / 2),
-    rotation: 0,
-    stored: {}
+    rotation: 0
   }
 }

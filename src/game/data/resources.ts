@@ -27,6 +27,9 @@ export const FORAGE_TABLE: WeightedEntry<ResourceId>[] = [
   { item: 'berry', weight: 35 }
 ]
 
+// The basics found by foraging. Shown under "Materials"; everything else is shown under the building it belongs to.
+export const STARTER_RESOURCES: ResourceId[] = FORAGE_TABLE.map(entry => entry.item)
+
 export function emptyResources (): Record<ResourceId, number> {
   const resources = {} as Record<ResourceId, number>
   RESOURCE_IDS.forEach(id => { resources[id] = 0 })
